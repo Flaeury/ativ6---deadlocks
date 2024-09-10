@@ -1,0 +1,95 @@
+#include <stdio.h>
+/*biblioteca de threads */
+#include <pthread.h> 
+#include <unistd.h>
+
+/* Mutexes utilizados */
+pthread_mutex_t lock1, lock2;
+
+void* Processo_A(void* arg) {
+    while (1) {
+        // Tenta adquirir lock1
+        if (pthread_mutex_trylock(&lock1) == 0) {
+            printf("Processo A adquiriu lock1\n");
+
+            // Tenta adquirir lock2
+            if (pthread_mutex_trylock(&lock2) == 0) {
+                printf("Processo A adquiriu lock2\n");
+                printf("Processo A está na Seção Crítica!\n");
+
+                // Simulação de operação
+                sleep(1);
+
+                // Libera os locks
+                pthread_mutex_unlock(&lock2);
+                pthread_mutex_unlock(&lock1);
+                break; // Sai do loop quando a seção crítica é completada com sucesso
+            } else {
+                // Não conseguiu lock2, libera lock1 e tenta novamente
+                pthread_mutex_unlock(&lock1);
+                printf("Processo A falhou ao adquirir lock2, liberando lock1 e tentando novamente\n");
+            }
+        }
+
+        // Pequena pausa antes de tentar novamente
+        sleep(1);
+    }
+
+    return NULL;
+}
+
+void* Processo_B(void* arg) {
+    while (1) {
+        // Tenta adquirir lock2
+        if (pthread_mutex_trylock(&lock2) == 0) {
+            printf("Processo B adquiriu lock2\n");
+
+            // Tenta adquirir lock1
+            if (pthread_mutex_trylock(&lock1) == 0) {
+                printf("Processo B adquiriu lock1\n");
+                printf("Processo B está na seção crítica\n");
+
+                // Simulação de operação
+                sleep(1);
+
+                // Libera os locks
+                pthread_mutex_unlock(&lock1);
+                pthread_mutex_unlock(&lock2);
+                break; // Sai do loop quando a seção crítica é completada com sucesso
+            } else {
+                // Não conseguiu lock1, libera lock2 e tenta novamente
+                pthread_mutex_unlock(&lock2);
+                printf("Processo B falhou ao adquirir lock1, liberando lock2 e tentando novamente\n");
+            }
+        }
+
+        // Pequena pausa antes de tentar novamente
+        sleep(1);
+    }
+
+    return NULL;
+}
+
+/* Simulação dos processos funcionando */
+int main() {
+    /* Identificadores de thread */
+    pthread_t t1,t2;
+    
+    /* Inicialização dos mutexes */
+    pthread_mutex_init(&lock1, NULL);
+    pthread_mutex_init(&lock2, NULL);
+
+    /* Atribuindo as threads aos processos */
+    pthread_create(&t1, NULL, Processo_A, NULL);
+    pthread_create(&t2, NULL, Processo_B, NULL);
+
+    /* Sincronização de threads */
+    pthread_join(&t1, NULL);
+    pthread_join(&t2, NULL);
+
+    /* Finalização dos mutexes */
+    pthread_mutex_destroy(&lock1);
+    pthread_mutex_destroy(&lock2);
+
+    return 0;
+}
